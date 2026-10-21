@@ -1,0 +1,13 @@
+# Servicios locales para correr el proyecto sin cuentas externas.
+#   MongoDB  -> localhost:27017
+#   Mailpit  -> SMTP localhost:1025 · bandeja web http://localhost:8025
+services:
+  mongo:
+    image: mongo:8
+    ports: ["27017:27017"]
+    volumes: ["mongo-data:/data/db"]
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["1025:1025", "8025:8025"]
+volumes:
+  mongo-data:

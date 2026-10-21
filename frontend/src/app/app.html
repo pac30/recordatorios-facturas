@@ -1,0 +1,124 @@
+<main>
+  <header class="cabecera">
+    <div>
+      <h1>Facturas y recordatorios</h1>
+      <p class="sub">{{ resumen().clientes }} clientes · {{ resumen().facturas }} facturas</p>
+    </div>
+    <div class="acciones">
+      <button class="btn secundario" (click)="reiniciarDemo()" [disabled]="cargando() || procesando()">Reiniciar datos demo</button>
+      <button class="btn" (click)="procesarTodos()" [disabled]="cargando() || procesando() || resumen().enRecordatorio === 0">
+        @if (procesando() === 'todos') { <span class="spin"></span> Enviando… } @else { Enviar recordatorios }
+      </button>
+    </div>
+  </header>
+
+  @if (mensaje(); as m) {
+    <div class="aviso" [class.error]="m.tipo === 'error'" role="status">
+      <span>{{ m.texto }}</span>
+      <button class="cerrar" (click)="cerrarAviso()" aria-label="Cerrar aviso">×</button>
+    </div>
+  }
+
+  <section class="kpis" aria-label="Resumen">
+    <article class="kpi total" style="--i: 0">
+      <span class="icono">$</span>
+      <div>
+        <span class="kpi-et">Monto total</span>
+        <strong>{{ kpis().montoTotal | currency:'COP':'symbol-narrow':'1.0-0' }}</strong>
+        <span class="kpi-sub">{{ kpis().montoPendiente | currency:'COP':'symbol-narrow':'1.0-0' }} por cobrar</span>
+      </div>
+    </article>
+    <article class="kpi primer" style="--i: 1">
+      <span class="icono">1</span>
+      <div>
+        <span class="kpi-et">Primer recordatorio</span>
+        <strong>{{ kpis().primer | number:'1.0-0' }}</strong>
+        <span class="kpi-sub">aviso inicial pendiente</span>
+      </div>
+    </article>
+    <article class="kpi segundo" style="--i: 2">
+      <span class="icono">2</span>
+      <div>
+        <span class="kpi-et">Segundo recordatorio</span>
+        <strong>{{ kpis().segundo | number:'1.0-0' }}</strong>
+        <span class="kpi-sub">próximas a desactivarse</span>
+      </div>
+    </article>
+    <article class="kpi desactivado" style="--i: 3">
+      <span class="icono">✕</span>
+      <div>
+        <span class="kpi-et">Desactivadas</span>
+        <strong>{{ kpis().desactivadas | number:'1.0-0' }}</strong>
+        <span class="kpi-sub">sin más avisos</span>
+      </div>
+    </article>
+  </section>
+
+  <div class="barra">
+    <nav class="filtros" aria-label="Filtrar por estado">
+      <button [class.activo]="filtro() === 'todos'" (click)="filtro.set('todos')">Todos <span>{{ facturas().length }}</span></button>
+      @for (e of estados; track e) {
+        <button [attr.data-e]="e" [class.activo]="filtro() === e" (click)="filtro.set(e)">{{ e }} <span>{{ conteo()[e] || 0 }}</span></button>
+      }
+    </nav>
+    <input class="buscar" type="search" placeholder="Buscar cliente o factura…"
+           [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" aria-label="Buscar" />
+  </div>
+
+  @if (cargando() && facturas().length === 0) {
+    @for (i of [1, 2]; track i) { <div class="esqueleto"></div> }
+  } @else if (grupos().length === 0) {
+    <p class="vacio">No hay facturas que coincidan.</p>
+  }
+
+  @for (g of grupos(); track g.clienteId; let i = $index) {
+    <section class="cliente" [style.--i]="i + 4">
+      <div class="cliente-cab">
+        <button class="plegar" (click)="alternar(g.clienteId)" [attr.aria-expanded]="!plegados().has(g.clienteId)"
+                [attr.aria-label]="'Mostrar u ocultar facturas de ' + g.cliente">
+          <span class="chevron" [class.cerrado]="plegados().has(g.clienteId)">▾</span>
+        </button>
+        <div class="avatar">{{ g.iniciales }}</div>
+        <div class="datos">
+          <h2>{{ g.cliente }}</h2>
+          <span class="email">{{ g.email }}</span>
+        </div>
+        <div class="total-cliente">
+          <strong>{{ g.total | currency:'COP':'symbol-narrow':'1.0-0' }}</strong>
+          <span>{{ g.facturas.length }} factura(s)</span>
+        </div>
+        <button class="btn pequeno" (click)="procesarCliente(g.clienteId)"
+                [disabled]="g.porEnviar === 0 || procesando() !== null || cargando()">
+          @if (procesando() === g.clienteId) { <span class="spin"></span> Enviando… } @else { Enviar ({{ g.porEnviar }}) }
+        </button>
+      </div>
+
+      @if (!plegados().has(g.clienteId)) {
+        <table>
+          <thead>
+            <tr><th>Factura</th><th>Vencimiento</th><th class="num">Monto</th><th>Avance</th><th>Estado</th></tr>
+          </thead>
+          <tbody>
+            @for (f of g.facturas; track f.id) {
+              <tr [class.flash]="cambiadas().has(f.id)" [attr.data-estado]="f.estado">
+                <td class="fuerte">{{ f.numero }}</td>
+                <td>
+                  {{ f.fechaVencimiento | date:'dd/MM/yyyy' }}
+                  @if (diasVencida(f) > 0) { <small class="mut">hace {{ diasVencida(f) }} d</small> }
+                  @else { <small class="mut">en {{ -diasVencida(f) }} d</small> }
+                </td>
+                <td class="num">{{ f.monto | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
+                <td>
+                  <span class="pasos" [attr.data-estado]="f.estado" [attr.aria-label]="'Paso ' + paso(f) + ' de 3'">
+                    <i [class.on]="paso(f) >= 1"></i><i [class.on]="paso(f) >= 2"></i><i [class.on]="paso(f) >= 3"></i>
+                  </span>
+                </td>
+                <td><span class="estado" [attr.data-estado]="f.estado">{{ f.estado }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+</main>
