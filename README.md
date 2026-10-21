@@ -10,6 +10,8 @@ Lee facturas de MongoDB, envía por email un recordatorio según su estado y act
 El estado solo se actualiza **después** de que el correo se envió bien. Si el envío falla, la factura conserva su estado y el proceso continúa con las demás. Los correos son HTML (con tabla de detalle de la factura y color según el aviso) y llevan también versión en texto plano.
 
 > Documentación detallada: [planteamiento y arquitectura](docs/ARQUITECTURA.md) · [resultado, progreso y pasos a seguir](RESULTADO.md)
+>
+> También en PDF: [Planteamiento y arquitectura](docs/Planteamiento_y_arquitectura.pdf) · [Resultado, progreso y pasos a seguir](docs/Resultado_progreso_y_pasos_a_seguir.pdf)
 
 ## Arquitectura (Clean Architecture)
 
